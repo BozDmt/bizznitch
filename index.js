@@ -74,7 +74,7 @@ async function main(){
 
         if(!socket.recovered){
             try {
-                await db.each('SELECT id, content FROM messages WHERE id > ?',
+                await db.each('SELECT id, content FROM messages WHERE id > ?',//'AND room = ?'
                     [socket.handshake.auth.serverOffset || 0],
                     (_err,row)=>{
                         if(_err){
