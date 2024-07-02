@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Socket.IO chat</title>
     <style>
@@ -30,9 +33,9 @@
   <body>
     <h3>Join a room:</h3>
     <div class="rooms">
-      <button class="roomBtn" id="r1">Room1</button>
-      <button class="roomBtn" id="r2">Room2</button>
-      <button class="roomBtn" id="r3">Room3</button>
+      <button class="roomBtn" id="r1" name="Room1" occupied="false">Room1</button>
+      <button class="roomBtn" id="r2" name="Room2" occupied="false">Room2</button>
+      <button class="roomBtn" id="r3" name="Room3" occupied="false">Room3</button>
     </div>
     <ul id="messages"></ul>
     <form id="form" action="">
@@ -41,82 +44,7 @@
       <button id="disconnect">Disconnect</button>
     </form>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        let counter = 0
-
-        const socket = io({
-          auth:{
-            serverOffset: 0
-          },
-          ackTimeout: 1000,
-          retries: 3,
-        })
-
-        const form = document.getElementById('form');
-        const input = document.getElementById('input');
-        const messages = document.getElementById('messages');
-
-        const disconnectBtn = document.getElementById('disconnect')
-        disconnectBtn.addEventListener('click',(e)=>{
-            e.preventDefault()
-            if(socket.connected){
-                disconnectBtn.innerText = 'Connect'
-                socket.disconnect()
-            }else{
-                disconnectBtn.innerText = 'Disconnect'
-                socket.connect()
-            }
-        })
-
-        const roomBtns = document.querySelectorAll('.roomBtn')
-
-        for(const room of roomBtns){
-          room.addEventListener('click',(e)=>{
-            e.preventDefault()
-            socket.emit('join room',room.textContent,(err,rsp)=>{
-              if(err){
-                console.log('error joining room')
-              }else{
-                console.log(rsp.status)
-              }
-            })
-          })
-        }
-
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (input.value) {
-              const clientOffset = `${socket.id}-`
-              
-              socket.emit('chat message', input.value, clientOffset,
-              (err,resp)=>{
-                if(err){
-                  console.log(err)
-                }else{
-                  console.log(resp.status)
-                }
-              })
-              input.value = '';
-            }
-          })  
-          
-          socket.on('chat message',(msg, serverOffset)=>{
-            const item = document.createElement('li')
-            item.textContent = msg
-            messages.appendChild(item)
-            window.scrollTo(0,document.body.scrollHeight)
-            socket.auth.serverOffset = serverOffset
-          })
-
-          socket.on('connected',(socketId,callback)=>{
-            const idItem = document.createElement('li')
-            idItem.textContent = `socket ID: ${socketId}`
-            messages.appendChild(idItem)
-            window.scrollTo(0,document.body.scrollHeight)
-          })
-          
-          console.log(counter)
-          </script>
+    <script src="/javascripts/main.js" type="text/javascript" defer></script>
           <!-- <script type="module" src="/public/javascripts/main.js"></script> -->
   </body>
   </html>

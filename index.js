@@ -5,11 +5,19 @@ const {join} = require('node:path')
 const sqlite3 = require('sqlite3')
 const {open} = require('sqlite')
 const { getRandomValues } = require('node:crypto')
+const path = require('path')
 // const cors = require('cors')
 
 // const options = {key: fs.readFileSync('/home/mitch/Lo`calL`ibraryApp/cert/privkey.pem'),
 //     cert: fs.readFileSync('/home/mitch/LocalLibraryApp/cert/fullchain.pem')
 // }
+
+function setNoCacheHeaders(req,res,next){
+    res.setHeader('Cache-Control','no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires','0')
+    next()
+}
 
 async function main(){
     const randArr = new Uint16Array(32768)
@@ -33,9 +41,11 @@ async function main(){
         );`)
 
     const app = express()
-    // app.use(cors())
+    // app.use(setNoCacheHeaders)
+    // app.use(cors({origin:['http://localhost:3700']}))
+    app.use(express.static(path.join(__dirname,'public')))
     const server = createServer(app)
-    server.listen(port,{cors: {origin:['http://localhost:3700']}})
+    server.listen(port)
     const io = new Server(server,{
         connectionStateRecovery:{
             // maxDisconnectionDuration: 2 * 60 * 1000,
@@ -52,7 +62,7 @@ async function main(){
     })
 
     io.on('connection',async (socket)=>{
-        socket.on('chat message',async (msg,clientOffset,callback)=>{
+        socket.on('chat message',async (room,msg,clientOffset,callback)=>{
             let result
             ++seed
             
@@ -68,7 +78,7 @@ async function main(){
                 console.log(e)
                 return
             }
-            io.to('Room3').emit('chat message',msg,result.lastID)
+            io.to(room).emit('chat message',msg,result.lastID)
             callback({status: 'sent'})
         })
 
@@ -91,15 +101,20 @@ async function main(){
         }
         
         console.log('User connected')
+        
         io.emit('connected', socket.id,(resp)=>{
             console.log(resp.status)
         })
 
-        socket.on('join room',(roomName,callback)=>{
-            socket.rooms.forEach
-            socket.join(roomName)
+        socket.on('join room',(command,roomName,callback)=>{
+            if(command === 'Leave Room'){
+                socket.leave(roomName)
+                callback({status: 'Left Room'})
+            }else{
+                socket.join(roomName)
+                callback({status: `joined ${roomName}`})
+            }
             console.log(socket.rooms)
-            callback({status: `joined ${roomName}`})
         })
         
         socket.on('disconnect',()=>{
