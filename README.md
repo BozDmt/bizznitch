@@ -1,1 +1,1 @@
-# nodejs-realtime-chat
+# real time chat app
