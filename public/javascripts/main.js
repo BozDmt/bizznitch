@@ -11,8 +11,10 @@ const socket = io({
 const form = document.getElementById('form');
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
-
 const disconnectBtn = document.getElementById('disconnect')
+const roomBtns = document.querySelector('.rooms')
+const rooms = document.querySelectorAll('.roomBtn')
+
 disconnectBtn.addEventListener('click',(e)=>{
     e.preventDefault()
     if(socket.connected){
@@ -24,9 +26,6 @@ disconnectBtn.addEventListener('click',(e)=>{
     }
 })
 
-const roomBtns = document.querySelector('.rooms')
-const rooms = document.querySelectorAll('.roomBtn')
-
 roomBtns.addEventListener('click',(e)=>{
     const btName = {name: e.target.getAttribute('name'), id: e.target.getAttribute('id')}
         
@@ -37,7 +36,7 @@ roomBtns.addEventListener('click',(e)=>{
             console.log(rsp.status)
         }
     })
-    
+
     if(e.target.tagName === 'BUTTON'){
         e.target.innerHTML = e.target.innerHTML === btName.name ? 'Leave Room' : btName.name
         if(e.target.innerHTML === 'Leave Room'){
@@ -50,7 +49,7 @@ roomBtns.addEventListener('click',(e)=>{
             })
         }else{
             e.target.setAttribute('occupied','false')
-
+            messages.textContent = ''
             rooms.forEach((room)=>{
                 room.style.visibility = 'visible'
             })
@@ -63,22 +62,23 @@ form.addEventListener('submit', (e) => {
     if (input.value) {
         const clientOffset = `${socket.id}-`
         let roomName = ''
-        
-        rooms.forEach((room)=>{
+        const roomsArr = Array.from(rooms)
+            
+        for(const room of roomsArr){
             if(room.getAttribute('occupied') === 'true'){
                 roomName = room.getAttribute('name')
-                return
+                break
             }
-        })
-
-        socket.emit('chat message', roomName, input.value, clientOffset,
-        (err,resp)=>{
-        if(err){
-            console.log(err)
-        }else{
-            console.log(resp.status)
         }
-        })
+        
+        socket.emit('chat message', roomName, input.value, clientOffset,
+            (err,resp)=>{
+            if(err){
+                console.log(err)
+            }else{
+                console.log(resp.status)
+            }
+            })
         input.value = ''
     }
 })  
@@ -91,9 +91,9 @@ socket.on('chat message',(msg, serverOffset)=>{
     socket.auth.serverOffset = serverOffset
 })
 
-socket.on('connected',(socketId,callback)=>{
-    const idItem = document.createElement('li')
-    idItem.textContent = `socket ID: ${socketId}`
-    messages.appendChild(idItem)
-    window.scrollTo(0,document.body.scrollHeight)
-})
+// socket.on('connected',(socketId,callback)=>{
+//     const idItem = document.createElement('li')
+//     idItem.textContent = `socket ID: ${socketId}`
+//     messages.appendChild(idItem)
+//     window.scrollTo(0,document.body.scrollHeight)
+// })

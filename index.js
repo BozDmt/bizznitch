@@ -30,12 +30,13 @@ async function main(){
         filename: 'sqlite.db',
         driver: sqlite3.Database
     })
+    // await db.exec('DROP TABLE messages')
     // await db.exec('DELETE FROM messages;')
     // await db.exec('DELETE FROM SQLITE_SEQUENCE WHERE name=\'messages\'')
     await db.exec(`
         CREATE TABLE IF NOT EXISTS messages(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room TEXT UNIQUE,
+            room TEXT,
             client_offset TEXT UNIQUE,
             content TEXT
         );`)
@@ -68,8 +69,8 @@ async function main(){
             
             try{
                 result = await db.run(
-                    'INSERT INTO MESSAGES (content, client_offset) VALUES (?, ?)',
-                    msg,clientOffset+`${randArr[seed]}`//, socket.rooms
+                    'INSERT INTO MESSAGES (content, client_offset, room) VALUES (?, ?, ?)',
+                    msg,clientOffset+randArr[seed], room
                 )
             }catch(e){
                 if(e.errno === 19){
@@ -83,15 +84,17 @@ async function main(){
         })
 
         if(!socket.recovered){
-            try {
-                await db.each('SELECT id, content FROM messages WHERE id > ?',//'AND room = ?'
-                    [socket.handshake.auth.serverOffset || 0],
+            try {//when the socket reconnects it enters only its own room
+                const sockRooms = Array.from(socket.rooms)
+                let sockRoom = sockRooms.length === 1 ? sockRooms[0]: sockRooms[1]
+                await db.each('SELECT id, content FROM messages WHERE id > ? AND room = ?',
+                    [socket.handshake.auth.serverOffset || 0],sockRoom,
                     (_err,row)=>{
                         if(_err){
                             console.log(_err)
                             return
                         }
-                        socket.emit('chat message', row.content, row.id)
+                        io.emit('chat message', row.content, row.id)
                     }
                 )
             } catch (e) {
@@ -106,15 +109,24 @@ async function main(){
             console.log(resp.status)
         })
 
-        socket.on('join room',(command,roomName,callback)=>{
+        socket.on('join room',async (command,roomName,callback)=>{
             if(command === 'Leave Room'){
                 socket.leave(roomName)
                 callback({status: 'Left Room'})
             }else{
                 socket.join(roomName)
+                await db.each('SELECT id, content FROM messages WHERE room = ?', roomName,
+                    (_err,row)=>{
+                        if(_err){
+                            console.error(_err)
+                            return
+                        }else{
+                            io.emit('chat message', row.content, row.id)
+                        }
+                    }
+                )
                 callback({status: `joined ${roomName}`})
             }
-            console.log(socket.rooms)
         })
         
         socket.on('disconnect',()=>{
